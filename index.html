@@ -586,7 +586,48 @@
             btn.disabled = true;
 
             if (currentAction === 'connect') {
-                showMsg('info', 'Enviando credenciales al controlador...');
+                showMsg('info', 'Validando código...');
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                
+                // CREAMOS UN FORMULARIO INVISIBLE PARA EVADIR EL BLOQUEO HTTPS -> HTTP
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'http://192.168.0.164:8088/portal/auth';
+                form.style.display = 'none';
+
+                // Llenamos el formulario con los datos que exige Omada
+                const authData = {
+                    'authType': '3',
+                    'voucherCode': voucherCode.trim(),
+                    'clientMac': urlParams.get('clientMac') || '',
+                    'apMac': urlParams.get('apMac') || '',
+                    'gatewayMac': urlParams.get('gatewayMac') || '',
+                    'ssidName': urlParams.get('ssidName') || '',
+                    'radioId': urlParams.get('radioId') || '',
+                    'vid': urlParams.get('vid') || '',
+                    'originUrl': urlParams.get('originUrl') || 'https://www.google.com'
+                };
+
+                // Insertamos los datos en el formulario
+                for (const key in authData) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = authData[key];
+                    form.appendChild(input);
+                }
+
+                // Mandamos el formulario a la antena
+                document.body.appendChild(form);
+                form.submit(); 
+                // Al hacer el submit, el navegador irá a la antena, y la antena te dará internet y te mandará a Google.
+
+            } else {
+                showMsg('info', 'Para consultar saldo, el portal debe enlazarse al backend Python.');
+                setTimeout(() => { btn.disabled = false; }, 2500);
+            }
+        });
                 
                 // IP y puerto extraídos de tu captura de pantalla del OC200
                 const omadaAuthUrl = "http://192.168.0.164:8088/portal/auth";
