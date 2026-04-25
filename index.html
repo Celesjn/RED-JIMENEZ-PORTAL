@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="screen-orientation" content="portrait">
+    <title>Red Jimenez - Portal de Acceso</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script> 
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/tan-mon-cheri" rel="stylesheet">
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBjC1JeKEyguIm7_SiHA8MsRwm39rTc9l4&v=beta&map_ids=b4dcc5e417730f75b4109516&libraries=marker"></script>
+    
+    <style>
+        /* --- Paleta de Colores Definida --- */
+        :root {
+            --color-1: #a6fefe; /* Cian claro */
+            --color-2: #40dbdb; /* Turquesa */
+            --color-3: #31b0b0; /* Aguamarina */
+            --color-4: #248888; /* Verde azulado */
+            --color-5: #176161; /* Oscuro profundo */
+            --color-6: #0b3d3d; /* Casi negro */
+            --color-7: #031c1c; /* Negro puro */
+        }
+
+        /* --- Estilos Base --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Questrial', sans-serif;
+            background: #000;
+            color: var(--color-1);
+            min-height: 100vh;
+            overflow: hidden; 
+            position: relative;
+        }
+
+        /* --- Elementos del Mapa de Fondo --- */
+        #map-background {
+            position: fixed !important;
+            top: 0 !important; 
+            left: 0 !important;
+            width: 100vw !important; 
+            height: 100vh !important;
+            z-index: 0 !important;
+        }
+
+        .map-overlay {
+            position: fixed !important;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, rgba(3, 28, 28, 0.25) 0%, rgba(11, 61, 61, 0.1) 100%);
+            z-index: 1 !important;
+            pointer-events: none;
+            transition: opacity 0.8s ease;
+        }
+
+        /* --- Botón Flotante de Retorno --- */
+        #btn-back-home {
+            position: fixed;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            padding: 14px 35px;
+            background: rgba(3, 28, 28, 0.8);
+            border: 2px solid var(--color-2);
+            color: var(--color-1);
+            border-radius: 50px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            display: none; 
+            box-shadow: 0 0 20px rgba(166, 254, 254, 0.3);
+            animation: fadeInDown 0.6s ease;
+        }
+
+        /* --- Estilos Personalizados de InfoWindow (Pines) --- */
+        .gm-style-iw {
+            background: rgba(3, 28, 28, 0.9) !important;
+            border: 1px solid var(--color-2) !important;
+            padding: 15px !important;
+            border-radius: 15px !important;
+            max-width: 250px !important;
+        }
+        .gm-style-iw-d { overflow: hidden !important; }
+        .gm-ui-hover-effect { filter: invert(1); top: 5px !important; right: 5px !important; }
+
+        /* --- Contenedor de Interfaz --- */
+        #portal-ui {
+            position: relative;
+            z-index: 10;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s ease;
+        }
+
+        .hide-ui {
+            opacity: 0 !important;
+            pointer-events: none;
+            transform: scale(1.05);
+        }
+
+        /* --- Encabezado --- */
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            animation: fadeInDown 1s ease;
+        }
+
+        .logo-title {
+            font-family: 'Tan Mon Cheri', sans-serif;
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            color: var(--color-1);
+            text-shadow: 0 0 15px rgba(0,0,0,0.9);
+            letter-spacing: 0.12em;
+            line-height: 1;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--color-2);
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            margin-top: 10px;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        /* --- Cuadros de Cristal --- */
+        .glass-box {
+            background: rgba(3, 28, 28, 0.18);
+            border: 1px solid rgba(166, 254, 254, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 28px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            margin-bottom: 2rem;
+        }
+
+        .auth-title {
+            font-size: 1.4rem;
+            color: var(--color-1);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.6);
+        }
+
+        /* --- Botonera --- */
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .auth-btn {
+            padding: 1.2rem;
+            font-size: 1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            border: 2px solid var(--color-2);
+            background: rgba(11, 61, 61, 0.35);
+            color: var(--color-1);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            letter-spacing: 1px;
+        }
+
+        .auth-btn:hover {
+            background: rgba(49, 176, 176, 0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(64, 219, 219, 0.2);
+        }
+
+        /* --- Formularios e Inputs --- */
+        .voucher-section { display: none; margin-top: 1rem; }
+        .voucher-section.active { display: block; animation: fadeIn 0.5s; }
+
+        .voucher-input {
+            width: 100%;
+            padding: 1.3rem;
+            font-size: 1.4rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--color-3);
+            border-radius: 16px;
+            color: var(--color-1);
+            text-align: center;
+            letter-spacing: 5px;
+            margin-bottom: 1.5rem;
+            outline: none;
+        }
+
+        .voucher-input::placeholder { color: var(--color-3); letter-spacing: 1px; opacity: 0.6; }
+
+        .connect-btn {
+            width: 100%;
+            padding: 1.3rem;
+            font-size: 1.2rem;
+            font-weight: 900;
+            border: 1px solid var(--color-1);
+            background: linear-gradient(45deg, var(--color-5), var(--color-3));
+            color: var(--color-1);
+            border-radius: 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: transform 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+        
+        .connect-btn:hover { transform: scale(1.03); filter: brightness(1.2); }
+
+        /* --- Planes de Precios --- */
+        .plans-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 15px; 
+            width: 100%; 
+            max-width: 900px; 
+        }
+        
+        .plan-card { 
+            background: rgba(3, 28, 28, 0.18); 
+            border: 1px solid rgba(166, 254, 254, 0.3); 
+            border-radius: 20px; 
+            padding: 1.5rem 1rem; 
+            text-align: center; 
+            backdrop-filter: blur(8px);
+            transition: all 0.3s ease;
+        }
+
+        .plan-card:hover { transform: translateY(-5px); border-color: var(--color-1); }
+
+        .plan-duration { font-size: 1.1rem; font-weight: bold; color: var(--color-1); margin-bottom: 5px; }
+        .plan-price { font-size: 1.8rem; color: var(--color-2); font-weight: 900; margin-bottom: 5px; }
+        .plan-label { font-size: 0.75rem; color: var(--color-1); opacity: 0.8; text-transform: uppercase; }
+
+        /* --- Botón Especial Puntos de Venta --- */
+        #go-to-map-btn {
+            margin-top: 40px;
+            background: rgba(36, 136, 136, 0.4);
+            border: 2px solid var(--color-1);
+            color: var(--color-1);
+            padding: 16px 45px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            letter-spacing: 3px;
+            width: fit-content; 
+            border-radius: 60px;
+            text-transform: uppercase;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            transition: all 0.4s ease;
+            animation: pulseGlow 2.5s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(166, 254, 254, 0.5); }
+            70% { box-shadow: 0 0 0 20px rgba(166, 254, 254, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(166, 254, 254, 0); }
+        }
+
+        /* --- Hints y Errores --- */
+        .error-hint, .success-hint, .info-hint {
+            font-size: 0.9rem; margin-bottom: 1.5rem; text-align: center;
+            padding: 1.2rem; border-radius: 12px; display: none; font-weight: 600;
+        }
+        .error-hint { color: #ffbaba; background: rgba(255, 0, 0, 0.35); border: 1px solid #ff5f5f; }
+        .success-hint { color: var(--color-1); background: rgba(64, 219, 219, 0.35); border: 1px solid var(--color-2); }
+        .info-hint { color: var(--color-1); background: rgba(11, 61, 61, 0.6); border: 1px solid var(--color-4); }
+
+        /* --- Modal QR --- */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
+        .modal-content { background: rgba(11, 61, 61, 0.6); border-radius: 30px; padding: 2.5rem; max-width: 420px; width: 90%; border: 1px solid var(--color-2); }
+        #qr-reader { width: 100%; border-radius: 20px; overflow: hidden; background: #000; aspect-ratio: 9/16; position: relative; border: 2px solid var(--color-3); }
+        .scanner-line { position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--color-1); box-shadow: 0 0 25px var(--color-1); animation: scanLoop 2.5s infinite linear; }
+        @keyframes scanLoop { 0% { top: 0%; } 100% { top: 100%; } }
+
+        /* --- Responsive --- */
+        @media (max-width: 500px) {
+            .plans-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .glass-box { padding: 1.5rem; }
+            .logo-title { font-size: 2.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map-background"></div>
+    <div class="map-overlay" id="overlay"></div>
+    
+    <button id="btn-back-home" onclick="returnToPortal()">🏠 VOLVER AL INICIO</button>
+
+    <div id="portal-ui">
+        
+        <div class="header">
+            <h1 class="logo-title">RED JIMENEZ</h1>
+            <p class="subtitle">Internet de Alta Velocidad</p>
+        </div>
+
+        <div class="glass-box">
+            <h2 class="auth-title" id="main-title">Acceso a la Red</h2>
+            
+            <div class="error-hint" id="error-hint"></div>
+            <div class="success-hint" id="success-hint"></div>
+            <div class="info-hint" id="info-hint"></div>
+            
+            <div id="step-action" class="auth-buttons">
+                <button class="auth-btn" onclick="selectAction('connect')">🌐 CONECTAR</button>
+                <button class="auth-btn" onclick="selectAction('consult')">🔍 CONSULTAR</button>
+            </div>
+
+            <div id="step-method" style="display: none;">
+                <div class="auth-buttons">
+                    <button class="auth-btn" id="scanQrBtn">📱 ESCANEAR QR</button>
+                    <button class="auth-btn" id="enterCodeBtn">⌨️ USAR CÓDIGO</button>
+                </div>
+                <button onclick="goBackToAction()" style="background:none; border:none; color:var(--color-1); cursor:pointer; margin-top:15px; width:100%; text-decoration:underline;">← Volver</button>
+            </div>
+
+            <div class="voucher-section" id="voucherSection">
+                <form id="voucherForm">
+                    <input type="text" class="voucher-input" id="voucherCode" placeholder="CÓDIGO" autocomplete="off">
+                    <button type="submit" class="connect-btn" id="executeBtn">CONTINUAR</button>
+                </form>
+                <button onclick="goBackToMethod()" style="background:none; border:none; color:var(--color-1); cursor:pointer; margin-top:15px; width:100%; text-decoration:underline;">← Volver</button>
+            </div>
+        </div>
+
+        <div class="plans-grid">
+            <div class="plan-card">
+                <div class="plan-duration">1 HORA</div>
+                <div class="plan-price">$10</div>
+                <div class="plan-label">TIEMPO GUARDABLE</div>
+            </div>
+            <div class="plan-card">
+                <div class="plan-duration">5 HORAS</div>
+                <div class="plan-price">$40</div>
+                <div class="plan-label">TIEMPO GUARDABLE</div>
+            </div>
+            <div class="plan-card">
+                <div class="plan-duration">1 SEMANA</div>
+                <div class="plan-price">$100</div>
+                <div class="plan-label">7 DÍAS TOTALES</div>
+            </div>
+            <div class="plan-card">
+                <div class="plan-duration">1 MES</div>
+                <div class="plan-price">$250</div>
+                <div class="plan-label">30 DÍAS TOTALES</div>
+            </div>
+        </div>
+
+        <button id="go-to-map-btn">📍 PUNTOS DE VENTA</button>
+    </div>
+
+    <div class="modal" id="qrModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem;">
+                <h3 style="color:var(--color-1); font-size: 1.3rem;">Escaneando...</h3>
+                <button onclick="document.getElementById('qrModal').style.display='none'; stopQR();" style="background:none; border:none; color:var(--color-1); font-size: 2rem; cursor:pointer;">&times;</button>
+            </div>
+            <div id="qr-reader">
+                <video id="qr-video" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+                <canvas id="qr-canvas" style="display: none;"></canvas>
+                <div class="scanner-line"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // 1. CONFIGURACIÓN DEL MAPA 3D Y CÁMARA
+        // =========================================================
+        let map;
+        let headingValue = 358;
+        let isMapMode = false;
+        
+        const portalCenter = { lat: 17.03611711, lng: -91.42645851 };
+        let currentCenter = { ...portalCenter };
+        let currentZoom = 18;
+
+        let globalMarkers = [];
+        let globalInfoWindow = null;
+
+        async function initMap() {
+            map = new google.maps.Map(document.getElementById("map-background"), {
+                center: currentCenter,
+                zoom: currentZoom,
+                tilt: 65,
+                heading: headingValue,
+                mapId: "b4dcc5e417730f75b4109516",
+                disableDefaultUI: true,
+                gestureHandling: "none",
+                mapTypeId: 'hybrid'
+            });
+
+            await initMarkers();
+
+            google.maps.event.addListenerOnce(map, 'tilesloaded', () => {
+                requestAnimationFrame(animateCameraLoop);
+            });
+        }
+
+        function animateCameraLoop() {
+            // Rotación infinita suave
+            headingValue += isMapMode ? 0.08 : 0.04;
+            if (headingValue >= 360) headingValue = 0;
+
+            map.moveCamera({
+                center: currentCenter,
+                zoom: currentZoom,
+                heading: headingValue,
+                tilt: 65
+            });
+            requestAnimationFrame(animateCameraLoop);
+        }
+
+        // =========================================================
+        // 2. PINES E INFORMACIÓN (PUNTOS DE VENTA)
+        // =========================================================
+        async function initMarkers() {
+            const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+            globalInfoWindow = new google.maps.InfoWindow();
+
+            const locations = [
+                { pos: { lat: 17.0370805, lng: -91.4253055 }, name: "Casa Melchor Jimenez" },
+                { pos: { lat: 17.0365694, lng: -91.4254194 }, name: "Casa Ramon Jimenez" }
+            ];
+
+            locations.forEach(loc => {
+                const marker = new AdvancedMarkerElement({
+                    map: null, // Ocultos al inicio
+                    position: loc.pos,
+                    title: loc.name
+                });
+
+                marker.addListener("click", () => {
+                    globalInfoWindow.close();
+                    const content = `
+                        <div style="color:#ffffff; font-family: 'Questrial', sans-serif; text-align: center;">
+                            <strong style="font-size: 1.4rem; color: #40dbdb; display: block; margin-bottom: 5px;">${loc.name}</strong>
+                            <span style="font-size: 1.1rem; opacity: 0.9;">Punto de Venta Oficial</span>
+                        </div>
+                    `;
+                    globalInfoWindow.setContent(content);
+                    globalInfoWindow.open(map, marker);
+                });
+                globalMarkers.push(marker);
+            });
+        }
+
+        // --- Transición Inmersiva al Mapa ---
+        document.getElementById('go-to-map-btn').addEventListener('click', () => {
+            isMapMode = true;
+            document.getElementById('portal-ui').classList.add('hide-ui');
+            document.getElementById('overlay').style.opacity = '0';
+            
+            globalMarkers.forEach(m => m.map = map);
+
+            setTimeout(() => {
+                document.getElementById('btn-back-home').style.display = 'block';
+            }, 800);
+
+            // Vuelo de cámara suave (Easing)
+            animateValue(currentZoom, 19.5, 1500, (v) => currentZoom = v);
+            animateValue(currentCenter.lat, 17.036825, 1500, (v) => currentCenter.lat = v);
+            animateValue(currentCenter.lng, -91.425362, 1500, (v) => currentCenter.lng = v);
+        });
+
+        function returnToPortal() {
+            isMapMode = false;
+            if (globalInfoWindow) globalInfoWindow.close();
+            globalMarkers.forEach(m => m.map = null);
+
+            document.getElementById('btn-back-home').style.display = 'none';
+            document.getElementById('portal-ui').classList.remove('hide-ui');
+            document.getElementById('overlay').style.opacity = '1';
+
+            animateValue(currentZoom, 18, 1500, (v) => currentZoom = v);
+            animateValue(currentCenter.lat, portalCenter.lat, 1500, (v) => currentCenter.lat = v);
+            animateValue(currentCenter.lng, portalCenter.lng, 1500, (v) => currentCenter.lng = v);
+        }
+
+        function animateValue(start, end, duration, callback) {
+            const startTime = performance.now();
+            function step(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easedProgress = 1 - Math.pow(1 - progress, 3);
+                callback(start + (end - start) * easedProgress);
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+
+        // =========================================================
+        // 3. LÓGICA DEL PORTAL Y CONEXIÓN OMADA (192.168.0.164)
+        // =========================================================
+        let currentAction = 'connect';
+
+        function selectAction(action) {
+            currentAction = action;
+            document.getElementById('step-action').style.display = 'none';
+            document.getElementById('step-method').style.display = 'block';
+            document.getElementById('main-title').innerText = action === 'connect' ? '¿Cómo conectarás?' : 'Consulta tu Voucher';
+            document.getElementById('executeBtn').innerText = action === 'connect' ? 'CONECTAR AHORA' : 'VER SALDO';
+        }
+
+        function goBackToAction() {
+            document.getElementById('step-method').style.display = 'none';
+            document.getElementById('step-action').style.display = 'flex';
+            document.getElementById('main-title').innerText = 'Portal de Acceso';
+            hideMessages();
+        }
+
+        function goBackToMethod() {
+            document.getElementById('voucherSection').classList.remove('active');
+            document.getElementById('step-method').style.display = 'block';
+        }
+
+        function showMsg(type, text) {
+            document.querySelectorAll('.error-hint, .success-hint, .info-hint').forEach(e => e.style.display = 'none');
+            const el = document.getElementById(type + '-hint');
+            el.innerText = text; el.style.display = 'block';
+        }
+
+        function hideMessages() { document.querySelectorAll('.error-hint, .success-hint, .info-hint').forEach(e => e.style.display = 'none'); }
+
+        // --- Escaneo QR (jsQR) ---
+        let stream = null; let video = document.getElementById('qr-video');
+        let canvas = document.getElementById('qr-canvas'); let ctx = canvas.getContext('2d'); let reqId = null;
+
+        function scanTick() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.height = video.videoHeight; canvas.width = video.videoWidth;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height, { inversionAttempts: "dontInvert" });
+                if (code) {
+                    document.getElementById('qrModal').style.display='none';
+                    document.getElementById('voucherCode').value = code.data;
+                    stopQR(); document.getElementById('executeBtn').click(); return;
+                }
+            }
+            reqId = requestAnimationFrame(scanTick);
+        }
+
+        async function startQR() {
+            document.getElementById('qrModal').style.display='flex';
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = stream; reqId = requestAnimationFrame(scanTick);
+            } catch(e) { alert("Cámara no disponible."); document.getElementById('qrModal').style.display='none'; }
+        }
+
+        function stopQR() { if (reqId) cancelAnimationFrame(reqId); if (stream) stream.getTracks().forEach(t => t.stop()); }
+
+        document.getElementById('scanQrBtn').addEventListener('click', startQR);
+        document.getElementById('enterCodeBtn').addEventListener('click', () => {
+            document.getElementById('step-method').style.display = 'none';
+            document.getElementById('voucherSection').classList.add('active');
+            setTimeout(() => document.getElementById('voucherCode').focus(), 100);
+        });
+
+        // --- Envío de Datos al Controlador Omada ---
+        document.getElementById('voucherForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const voucherCode = document.getElementById('voucherCode').value;
+            if(!voucherCode) return showMsg('error', 'Por favor, ingresa un código.');
+            
+            const btn = document.getElementById('executeBtn');
+            btn.disabled = true;
+
+            if (currentAction === 'connect') {
+                showMsg('info', 'Enviando credenciales al controlador...');
+                
+                // IP y puerto extraídos de tu captura de pantalla del OC200
+                const omadaAuthUrl = "http://192.168.0.164:8088/portal/auth";
+                const urlParams = new URLSearchParams(window.location.search);
+                
+                const authData = {
+                    authType: 3, 
+                    voucherCode: voucherCode.trim(),
+                    clientMac: urlParams.get('clientMac') || '',
+                    apMac: urlParams.get('apMac') || '',
+                    gatewayMac: urlParams.get('gatewayMac') || '',
+                    ssidName: urlParams.get('ssidName') || '',
+                    radioId: urlParams.get('radioId') || '',
+                    vid: urlParams.get('vid') || '',
+                    originUrl: urlParams.get('originUrl') || 'https://www.google.com'
+                };
+
+                fetch(omadaAuthUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authData),
+                    mode: 'no-cors' 
+                })
+                .then(() => {
+                    showMsg('success', 'Petición enviada. Si el voucher es válido, tendrás internet en breve.');
+                    btn.disabled = false;
+                })
+                .catch(error => {
+                    showMsg('error', 'Error al conectar con el controlador. Verifica que estés en la red local.');
+                    btn.disabled = false;
+                });
+
+            } else {
+                showMsg('info', 'Para consultar saldo, el portal debe estar alojado en un servidor con el script de Python activo.');
+                setTimeout(() => { btn.disabled = false; }, 2500);
+            }
+        });
+
+        // Inicializar el mapa al cargar la ventana
+        window.onload = initMap;
+    </script>
+</body>
+</html>
